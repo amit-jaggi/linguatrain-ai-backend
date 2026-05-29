@@ -1,0 +1,25 @@
+# dependencies
+node_modules/
+
+# production
+dist/
+
+# environment variables
+.env
+
+# logs
+logs
+*.log
+npm-debug.log*
+
+# macOS files
+.DS_Store
+
+# vscode
+.vscode/
+
+# vite
+vite.config.timestamp*
+
+# cache
+.cache/
