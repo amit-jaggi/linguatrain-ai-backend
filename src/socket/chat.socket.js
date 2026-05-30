@@ -7,10 +7,19 @@ const mockResponses = {
 function getMockResponse(message) {
   const msg = message.toLowerCase();
 
-  if (msg.includes('python')) return mockResponses.python;
-  if (msg.includes('react')) return mockResponses.react;
+  if (msg.includes('python')) {
+    return mockResponses.python;
+  }
+
+  if (msg.includes('react')) {
+    return mockResponses.react;
+  }
 
   return mockResponses.default;
+}
+
+function streamThinking(socket) {
+  socket.emit('bot_thinking');
 }
 
 function streamText(socket, text) {
@@ -20,6 +29,14 @@ function streamText(socket, text) {
   socket.emit('bot_typing');
 
   const interval = setInterval(() => {
+    // if socket disconnected stop stream
+    if (!socket.connected) {
+      clearInterval(interval);
+
+      console.log('Stream stopped due to disconnect');
+      return;
+    }
+
     if (index < text.length) {
       socket.emit('stream_token', text[index]);
       index++;
@@ -36,21 +53,37 @@ function streamText(socket, text) {
 
 function registerChatSocket(io) {
   io.on('connection', (socket) => {
-    console.log('User connected:', socket.id);
+    console.log('✅ User connected:', socket.id);
 
-    socket.on('send_message', (data) => {
-      const { message, language } = data;
-
-      const response = getMockResponse(message);
-
-      // simulate delay
-      setTimeout(() => {
-        streamText(socket, response);
-      }, 500);
+    // OPTIONAL
+    socket.emit('connected_successfully', {
+      socketId: socket.id,
     });
 
-    socket.on('disconnect', () => {
-      console.log('User disconnected');
+    socket.on('send_message', (data) => {
+      try {
+        streamThinking(socket);
+
+        const { message } = data;
+
+        const response = getMockResponse(message);
+
+        setTimeout(() => {
+          if (socket.connected) {
+            streamText(socket, response);
+          }
+        }, 1000);
+
+      } catch (error) {
+        console.log(error);
+        socket.emit('server_error', {
+          message: 'Something went wrong',
+        });
+      }
+    });
+
+    socket.on('disconnect', (reason) => {
+      console.log('❌ User disconnected:', reason);
     });
   });
 }
